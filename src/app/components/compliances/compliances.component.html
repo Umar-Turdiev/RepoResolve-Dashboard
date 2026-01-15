@@ -1,0 +1,37 @@
+<section class="panel" @popIn>
+  <div class="vuln-header">
+    <div class="name-box">
+      <h1>Compliances</h1>
+      <label class="count">{{ findings().length }} findings</label>
+    </div>
+  </div>
+
+  <div class="empty" *ngIf="!findings().length">
+    No findings yet. Run a scan to see results.
+  </div>
+
+  <ul class="list" *ngIf="findings().length">
+    <li class="item" *ngFor="let f of findings(); trackBy: trackById">
+      <div class="row">
+        <span class="{{ badgeClass(f.severity) }}">{{ f.severity }}</span>
+        <code class="rule" [title]="f.ruleId">{{ f.ruleId }}</code>
+      </div>
+
+      <span class="msg">{{ f.message }}</span>
+
+      <div class="loc" *ngIf="f.location?.file">
+        <i class="fa-regular fa-file-code"></i>
+        <span class="file">{{ f.location?.file }}</span>
+        <span class="line" *ngIf="f.location?.line"
+          >:{{ f.location?.line }}</span
+        >
+      </div>
+
+      <code
+        class="snippet hljs"
+        *ngIf="f.location?.snippet"
+        [innerHTML]="f.location?.snippet | code : langOf(f.location?.file)"
+      ></code>
+    </li>
+  </ul>
+</section>

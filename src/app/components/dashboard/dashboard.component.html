@@ -1,0 +1,92 @@
+<section @widgetsPopIn>
+  <div class="widget" style="width: 455px">
+    <div class="widget__header">
+      <h1>Security Summary</h1>
+    </div>
+    <div class="widget__content summary">
+      <pre>{{ aiSummary() || "—" }}</pre>
+    </div>
+  </div>
+
+  <div class="widget">
+    <div class="widget__header">
+      <h1>Vulnerability Findings</h1>
+      <a routerLink="/vulnerabilities" routerLinkActive="active">
+        <i class="fa-solid fa-arrow-up"></i>
+      </a>
+    </div>
+    <div class="widget__content semgrep">
+      <apx-chart
+        [series]="severitySeries()"
+        [labels]="severityLabels"
+        [chart]="chart"
+        [colors]="colors"
+        [dataLabels]="dataLabels"
+        [plotOptions]="plotOptions"
+        [legend]="legend"
+        [tooltip]="tooltip"
+        [responsive]="responsive"
+      ></apx-chart>
+
+      <apx-chart
+        [series]="barSeries()"
+        [chart]="barChart"
+        [colors]="barColors"
+        [plotOptions]="barPlot"
+        [fill]="barFill"
+        [stroke]="barStroke"
+        [tooltip]="barTooltip"
+      ></apx-chart>
+    </div>
+  </div>
+
+  <div class="widget" style="width: 400px">
+    <div class="widget__header">
+      <h1>Safety Rating</h1>
+    </div>
+    <div class="widget__content safety-ring">
+      <div class="insight-numbers">
+        <p>14</p>
+        <p>4</p>
+      </div>
+      <apx-chart
+        [series]="safetyRadialSeries()"
+        [chart]="safetyRadialChart"
+        [plotOptions]="safetyRadialPlot"
+        [fill]="safetyRadialFill"
+        [stroke]="safetyRadialStroke"
+        [labels]="safetyRadialLabels"
+      ></apx-chart>
+    </div>
+  </div>
+
+  <div class="widget wide">
+    <div class="widget__header">
+      <h1>Safety Score Trend</h1>
+    </div>
+    <div class="widget__content">
+      <apx-chart
+        [series]="safetySeries()"
+        [chart]="safetyChart"
+        [stroke]="safetyStroke"
+        [fill]="safetyFill"
+        [dataLabels]="safetyDataLabels"
+        [markers]="safetyMarkers"
+        [xaxis]="safetyXaxis"
+        [yaxis]="safetyYaxis"
+        [grid]="safetyGrid"
+        [tooltip]="safetyTooltip"
+      ></apx-chart>
+    </div>
+  </div>
+
+  <div class="widget wide">
+    <div class="widget__header">
+      <h1>Remediation Queue</h1>
+      <a routerLink="/pipelines" routerLinkActive="active">
+        <i class="fa-solid fa-arrow-up"></i>
+      </a>
+    </div>
+    <div class="widget__content">Details...</div>
+  </div>
+</section>

@@ -1,0 +1,290 @@
+@use "../../../styles/mixins.scss";
+@import "../../..//styles/tokens.scss";
+
+.panel {
+  @include mixins.widget;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vuln-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+
+  .name-box {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .count {
+    opacity: 0.8;
+  }
+
+  .sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    label {
+      opacity: 0.85;
+    }
+
+    .pill-select {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+
+      select {
+        appearance: none; // hide native arrow
+        -webkit-appearance: none;
+        -moz-appearance: none;
+
+        background: var(--panel-bg-opaque);
+        color: var(--fg);
+        border: $border;
+        padding: 8px 36px 8px 12px;
+        border-radius: 9999px; /* ✅ full pill */
+        font: inherit;
+        line-height: 1;
+        cursor: pointer;
+        outline: none;
+      }
+
+      /* chevron icon via pseudo-element so we keep it pure CSS */
+      &::after {
+        content: "";
+        position: absolute;
+        right: 10px;
+        width: 10px;
+        height: 10px;
+        pointer-events: none;
+        mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 512'><path fill='black' d='M31.5 192h257c28.4 0 42.7 34.5 22.6 54.6l-128.5 128c-12.5 12.5-32.8 12.5-45.3 0l-128.5-128C-11.2 226.5 3.1 192 31.5 192z'/></svg>")
+          center / contain no-repeat;
+        background: currentColor;
+        opacity: 0.75;
+      }
+    }
+  }
+}
+
+.empty {
+  opacity: 0.8;
+  font-style: italic;
+  padding: 8px 2px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  border: $border;
+  border-radius: 25px;
+  padding: 12px;
+  background: var(--panel-bg);
+
+  .row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    .rule {
+      opacity: 0.9;
+    }
+  }
+
+  .msg {
+    margin: 15px 0;
+    font-size: 17px;
+    font-weight: 500;
+    justify-content: start !important;
+  }
+
+  .loc {
+    margin-top: 6px;
+    opacity: 0.9;
+    .file {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+  }
+
+  .snippet {
+    margin-top: 8px;
+    max-height: 180px;
+    overflow: auto;
+    padding: 10px;
+    border-radius: 10px;
+    background: var(--panel-bg-inverted);
+    color: var(--fg-inverted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    display: block;
+  }
+
+  details.ai {
+    border: $border;
+    border-radius: 14px;
+    margin-top: 10px;
+    background: var(--panel-bg);
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      outline: none;
+
+      /* remove default marker (Safari/Firefox) */
+      &::-webkit-details-marker {
+        display: none;
+      }
+      &::marker {
+        content: "";
+      }
+
+      .sum-label {
+        font-weight: 400;
+      }
+      .chev {
+        transition: transform 0.25s ease;
+        font-size: 12px;
+        opacity: 0.9;
+      }
+    }
+
+    /* wrap to animate height + fade/slide */
+    .ai__content {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: max-height 0.75s ease, opacity 0.25s ease,
+        transform 0.25s ease;
+      padding: 0 12px; /* space retained but no top/bottom until open */
+    }
+
+    .ai-fix-btn {
+      background: #ffe877;
+      color: #000;
+      border: none;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 9999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      margin-right: 10px;
+      margin-bottom: 10px;
+
+      i {
+        font-size: 14px;
+      }
+    }
+
+    /* open state */
+    &[open] {
+      .chev {
+        transform: rotate(180deg);
+      }
+      .ai__content {
+        max-height: 1000px; /* big enough to fit content */
+        opacity: 1;
+        transform: translateY(0);
+        padding-bottom: 12px; /* reveal bottom padding on open */
+      }
+    }
+
+    .ai-block {
+      margin-top: 10px;
+
+      h4 {
+        margin: 0 0 6px;
+        font-size: 13px;
+        font-weight: 700;
+        opacity: 0.9;
+      }
+
+      p,
+      pre.remediation {
+        margin: 0;
+        background: var(--panel-bg);
+        border: 1px solid var(--border, #2a2a2a);
+        border-radius: 10px;
+        padding: 10px;
+        white-space: pre-wrap;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+    }
+  }
+}
+
+/* severity badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: var(--panel-bg-inverted);
+  border: 1px solid var(--border, #2a2a2a);
+  color: var(--fg-inverted);
+}
+.badge--crit {
+  background: #2b0b0b;
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.25);
+}
+.badge--high {
+  background: #2b140b;
+  color: #ffa94d;
+  border-color: rgba(255, 169, 77, 0.25);
+}
+.badge--med {
+  background: #1c2319;
+  color: #94d82d;
+  border-color: rgba(148, 216, 45, 0.25);
+}
+.badge--low {
+  background: #121a24;
+  color: #74c0fc;
+  border-color: rgba(116, 192, 252, 0.25);
+}
+.badge--info {
+  background: #101820;
+  color: #ced4da;
+  border-color: rgba(206, 212, 218, 0.25);
+}

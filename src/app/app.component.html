@@ -1,0 +1,58 @@
+<!-- <app-start-screen></app-start-screen> -->
+
+<ng-container *ngIf="!hasSession(); else appShell">
+  <app-start-screen></app-start-screen>
+</ng-container>
+
+<ng-template #appShell>
+  <div class="app-root">
+    <div role="navigation" class="menubar">
+      <a routerLink="/" class="brand">RepoResolve</a>
+
+      <div class="separator"></div>
+
+      <a
+        routerLink="/"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <i class="fa-solid fa-house"></i>
+        Dashboard
+      </a>
+      <a routerLink="/vulnerabilities" routerLinkActive="active">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        Vulnerabilities
+      </a>
+      <a routerLink="/compliances" routerLinkActive="active">
+        <i class="fa-solid fa-bug-slash"></i>
+        Remediation
+      </a>
+      <a routerLink="/pipelines" routerLinkActive="active">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        Scan History
+      </a>
+      <!-- <a routerLink="/rules" routerLinkActive="active">Rules</a> -->
+    </div>
+
+    <main class="main">
+      <header class="hdr" @slideDown>
+        <div class="repo-controls">
+          <a
+            class="repo-link"
+            href="https://github.com/TransformerOptimus/SuperAGI"
+          >
+            <i class="fa-brands fa-github"></i>
+            Repo: TransformerOptimus/SuperAGI</a
+          >
+          <button>Re-Scan</button>
+        </div>
+      </header>
+      <div class="page-container">
+        <router-outlet></router-outlet>
+      </div>
+      <!-- <div class="ai-chatbox" @popIn>
+        <app-ai-chatbox></app-ai-chatbox>
+      </div> -->
+    </main>
+  </div>
+</ng-template>

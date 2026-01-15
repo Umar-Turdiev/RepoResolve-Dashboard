@@ -1,0 +1,8 @@
+@use "../../../styles/mixins.scss";
+
+.panel {
+  @include mixins.widget;
+
+  width: 100%;
+  height: 100%;
+}

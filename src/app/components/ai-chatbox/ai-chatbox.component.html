@@ -1,0 +1,71 @@
+<div class="chat">
+  <div class="chat-header">
+    <h1 class="title">AI Assistant</h1>
+  </div>
+
+  <div class="chat-body" #scroll>
+    <div
+      *ngFor="let m of messages"
+      class="msg"
+      [class.ai]="m.role === 'assistant'"
+    >
+      <div class="bubble prose" [innerHTML]="m.content | md"></div>
+    </div>
+    <div *ngIf="streaming" class="typing">▌</div>
+  </div>
+
+  <form class="chat-input" (ngSubmit)="send()" autocomplete="off">
+    <div class="input-wrap bg-opaque">
+      <textarea
+        #ta
+        [(ngModel)]="draft"
+        name="draft"
+        rows="1"
+        placeholder="Ask anything…"
+        (input)="ta.style.height = 'auto'"
+      ></textarea>
+
+      <button
+        type="button"
+        class="send-btn"
+        [class.is-stop]="streaming"
+        [disabled]="(!draft || !draft.trim()) && !streaming"
+        (click)="streaming ? stop() : send()"
+        [attr.aria-label]="streaming ? 'Stop' : 'Send'"
+        [attr.title]="streaming ? 'Stop' : 'Send'"
+      >
+        <!-- Send (up arrow) -->
+        <svg
+          *ngIf="!streaming"
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          aria-hidden="true"
+        >
+          <path
+            d="M3.4 20.6L22 12 3.4 3.4l3.2 6.9L14 12l-7.4 1.7-3.2 6.9z"
+            fill="currentColor"
+          />
+        </svg>
+        <!-- Stop -->
+        <svg
+          *ngIf="streaming"
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          aria-hidden="true"
+        >
+          <rect
+            x="6"
+            y="6"
+            width="12"
+            height="12"
+            rx="2"
+            ry="2"
+            fill="currentColor"
+          />
+        </svg>
+      </button>
+    </div>
+  </form>
+</div>

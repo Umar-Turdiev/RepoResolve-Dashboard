@@ -1,0 +1,148 @@
+.chat {
+  height: 100%;
+  max-height: inherit; /* inherit the cap from the host */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* <- keep content inside the box */
+  border-radius: 40px;
+  background: var(--panel-bg-inverted);
+  box-sizing: border-box;
+}
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 25px;
+  .title {
+    font-size: 20px;
+    margin: 0;
+    color: var(--fg-inverted);
+  }
+}
+.chat-body {
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  height: 100%;
+  align-content: start;
+}
+.msg {
+  display: flex;
+  margin: 0 15px;
+  font-size: 14px;
+  .bubble {
+    height: fit-content;
+    max-width: 300px;
+    padding: 0 14px;
+    border-radius: 16px;
+    background: var(--accent);
+  }
+
+  .prose pre {
+    background: #0f1217;
+    border-radius: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+    white-space: pre;
+  }
+  .prose pre code {
+    display: inline-block;
+    min-width: 100%;
+    white-space: pre;
+  }
+  .prose code {
+    /* inline code */
+    white-space: pre-wrap;
+    word-break: break-word;
+    border-radius: 10px;
+  }
+}
+.msg.ai {
+  justify-content: center;
+  .bubble {
+    background: none;
+    color: var(--fg-inverted);
+    min-width: 95% !important;
+    padding: 0;
+  }
+}
+.msg:not(.ai) {
+  justify-content: flex-end;
+}
+.typing {
+  opacity: 0.7;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: white;
+}
+
+.chat-input {
+  display: grid;
+  gap: 8px;
+  padding: 15px;
+  textarea {
+    resize: vertical;
+    border-radius: 14px;
+    padding: 8px 12px;
+    background: var(--panel-bg-opaque);
+  }
+  /* Input wrapper with in-field action */
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    border-radius: 30px;
+    padding: 6px 56px 6px 12px; /* space for button on the right */
+
+    /* follow existing foreground; bg is provided by .bg-opaque */
+    background-color: var(--fg2);
+  }
+
+  /* Auto-grow textarea; caps height after a few lines */
+  .input-wrap textarea {
+    flex: 1 1 auto;
+    width: 100%;
+    max-height: 144px; /* cap growth */
+    resize: none;
+    overflow: auto;
+
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--fg-inverted);
+    font: inherit;
+    line-height: 1.35;
+  }
+
+  /* Circular send/stop button inside the field */
+  .send-btn {
+    position: absolute;
+    right: 6px;
+    width: 40px;
+    height: 40px;
+
+    border: 0;
+    outline: 0;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+
+    /* same yellow as user bubble; fallback chain */
+    background-color: var(--accent);
+    color: var(--button-fg, #111);
+    transition: opacity 120ms ease;
+  }
+  .send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* subtle cue when it's a Stop action */
+  .send-btn.is-stop {
+    filter: saturate(0.9) brightness(0.95);
+  }
+}
