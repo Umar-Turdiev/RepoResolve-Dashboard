@@ -12,6 +12,7 @@ import type {
 import { TinyfishService } from './tinyfish.service';
 import { BedrockService } from './bedrock.service';
 import { ScanService } from './scan.service';
+import { FindingsService } from './findings.service';
 
 @Injectable({ providedIn: 'root' })
 export class RemediationService {
@@ -19,6 +20,7 @@ export class RemediationService {
   private tinyfish = inject(TinyfishService);
   private bedrock = inject(BedrockService);
   private scan = inject(ScanService);
+  private findings = inject(FindingsService);
   private readonly _tasks = signal<RemediationTask[]>([]);
 
   readonly tasks = computed(() => this._tasks());
@@ -120,11 +122,16 @@ export class RemediationService {
       .then((res) => {
         console.log('[patcher] start response', res);
         const taskId = (res as any)?.taskId || (res as any)?.taskArn;
+        const branch = (res as any)?.branch;
         if (!taskId) {
           throw new Error('No taskId/taskArn returned from patcher start.');
         }
+        if (branch) {
+          this.updateTask(task.id, { patcherBranch: branch });
+          this.appendLog(task.id, 'codepatch', `Branch: ${branch}`);
+        }
         this.appendLog(task.id, 'codepatch', `Patcher taskId: ${taskId}`);
-        this.startPatcherLogs(task.id, taskId);
+        this.startPatcherLogs(task.id, taskId, branch, repoUrl);
       })
       .catch((err) => {
         console.error('[patcher] start error', err);
@@ -186,7 +193,12 @@ export class RemediationService {
       });
   }
 
-  private startPatcherLogs(taskId: string, patcherTaskId: string) {
+  private startPatcherLogs(
+    taskId: string,
+    patcherTaskId: string,
+    branch: string | undefined,
+    repoUrl: string
+  ) {
     const logsUrl = environment.lambdaEndpoints.patcherLogsUrl;
     if (!logsUrl) return;
     let cursor = '';
@@ -223,6 +235,7 @@ export class RemediationService {
           console.log('[patcher] logs complete');
           this.appendLog(taskId, 'codepatch', 'Patcher logs completed.');
           this.updateTask(taskId, { status: 'completed' });
+          this.startRescan(taskId, repoUrl, branch);
         },
         error: (err) => {
           console.error('[patcher] logs error', err);
@@ -233,6 +246,30 @@ export class RemediationService {
       });
 
     this.trackSub(taskId, sub);
+  }
+
+  private startRescan(taskId: string, repoUrl: string, branch?: string) {
+    if (!repoUrl) return;
+    const effectiveBranch = branch || environment.devConfigs.patcherBranch;
+    const label = effectiveBranch ? `branch ${effectiveBranch}` : 'default branch';
+    this.appendLog(taskId, 'rescan', `Rescan starting (${label}).`);
+    console.log('[patcher] rescan start', { repoUrl, branch: effectiveBranch });
+    this.findings.clear('semgrep');
+
+    this.scan
+      .startScan(repoUrl, 'semgrep', { branch: effectiveBranch })
+      .subscribe({
+      next: (res) => {
+        this.appendLog(taskId, 'rescan', `Rescan taskId: ${res.taskId}`);
+        this.scan.markStarted(res, 'semgrep');
+        this.scan.startLogPolling(res.taskId, 'semgrep');
+      },
+      error: (err) => {
+        const msg = err?.message || String(err);
+        this.appendLog(taskId, 'rescan', `Rescan failed: ${msg}`);
+        console.error('[patcher] rescan error', err);
+      },
+    });
   }
 
   private patcherSubs = new Map<string, Subscription>();

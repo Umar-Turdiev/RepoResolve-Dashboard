@@ -23,6 +23,7 @@ export interface RemediationTask {
   error?: string;
   result?: RemediationResult;
   finding?: Finding;
+  patcherBranch?: string;
   tinyfishStatus?: RemediationStatus;
   tinyfishOutput?: string;
   tinyfishError?: string;

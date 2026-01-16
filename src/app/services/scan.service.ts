@@ -195,6 +195,7 @@ export interface StartScanResponse {
   taskId: string;
   startedAt: string;
   repo: string;
+  branch?: string;
 }
 
 export interface LogChunk {
@@ -215,6 +216,7 @@ export class ScanService {
     taskId: string;
     repo: string;
     tool: ToolKind;
+    branch?: string;
   } | null>(null);
   readonly scanPhase = signal<ScanPhase>('idle');
   readonly resultFile = signal<string | null>(null);
@@ -226,7 +228,11 @@ export class ScanService {
   private logSub?: Subscription;
 
   /** Start a scan for a tool (works for both semgrep and harness) */
-  startScan(input: string, tool: ToolKind): Observable<StartScanResponse> {
+  startScan(
+    input: string,
+    tool: ToolKind,
+    opts?: { branch?: string }
+  ): Observable<StartScanResponse> {
     const a = ADAPTERS[tool];
     let v = String(input || '').trim();
 
@@ -236,17 +242,16 @@ export class ScanService {
 
     this.scanPhase.set('starting');
 
+    const body: Record<string, unknown> = { repoUrl: v };
+    if (opts?.branch) body['TARGET_BRANCH'] = opts.branch;
+
     return this.http
-      .post<any>(
-        a.startUrl,
-        { repoUrl: v }, // matches your working --data '{"repoUrl":"psf/requests"}'
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Target-Repo': v, // exactly like your curl -H "X-Target-Repo"
-          },
-        }
-      )
+      .post<any>(a.startUrl, body, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Target-Repo': v, // exactly like your curl -H "X-Target-Repo"
+        },
+      })
       .pipe(
         map((res: any) => {
           const body =
@@ -264,6 +269,7 @@ export class ScanService {
             taskId: rawTaskId, // <-- keep ARN
             startedAt: body?.startedAt ?? res?.startedAt,
             repo: body?.repo ?? v,
+            branch: body?.branch ?? opts?.branch,
           } as StartScanResponse;
 
           // store both variants on the session so we can retry if needed
@@ -277,7 +283,12 @@ export class ScanService {
 
   /** Mark started so the shell can switch */
   markStarted(res: StartScanResponse, tool: ToolKind) {
-    this.scanSession.set({ taskId: res.taskId, repo: res.repo, tool });
+    this.scanSession.set({
+      taskId: res.taskId,
+      repo: res.repo,
+      tool,
+      branch: res.branch,
+    });
     this.scanPhase.set('scanning');
   }
 
