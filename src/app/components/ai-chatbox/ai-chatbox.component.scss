@@ -46,7 +46,7 @@
   background-color: #f7f7fb;
   color: #1d1d1f;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(0, 0, 0, 0.06);
   background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
   background-size: 16px 16px;
@@ -82,12 +82,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
 }
 .node-label {
   font-size: 12px;
   opacity: 0.9;
   font-weight: 600;
+  text-wrap-mode: nowrap;
 }
 .node-status {
   font-size: 11px;
@@ -99,6 +99,12 @@
   min-width: 70px;
   justify-content: flex-end;
   color: #4c4c4c;
+  position: relative;
+}
+.status-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 .wf-status .dot {
   width: 8px;
@@ -106,16 +112,26 @@
   border-radius: 999px;
   display: inline-block;
   background: transparent;
+  position: relative;
 }
 .wf-status .label:empty {
   display: none;
 }
-.wf-status.is-waiting .dot {
+.wf-status.is-pending .dot {
   display: none;
 }
 .wf-status.is-running .dot {
   background: #f6c000;
   box-shadow: 0 0 0 3px rgba(246, 192, 0, 0.2);
+}
+.wf-status.is-running .dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 2px solid rgba(246, 192, 0, 0.35);
+  border-top-color: rgba(246, 192, 0, 0.95);
+  animation: spin 1s linear infinite;
 }
 .wf-status.is-done .dot {
   background: #2ecc71;
@@ -134,6 +150,59 @@
 }
 .workflow-column .workflow-node:last-child .connector {
   display: none;
+}
+
+.inspect-pop {
+  position: absolute;
+  left: 0;
+  top: -10px;
+  transform: translateY(-100%);
+  z-index: 5;
+  min-width: 220px;
+  max-width: min(320px, calc(100% - 16px), calc(100vw - 80px));
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  padding: 8px 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  pointer-events: none;
+}
+.workflow-column:last-child .inspect-pop {
+  left: auto;
+  right: 0;
+}
+.status-wrap:hover .inspect-pop {
+  opacity: 1;
+  pointer-events: auto;
+}
+.inspect-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+.inspect-empty {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.inspect-log {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 .chat-body {
   overflow: auto;

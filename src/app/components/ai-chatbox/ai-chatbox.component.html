@@ -33,9 +33,20 @@
         <div class="workflow-node" *ngFor="let n of tinyfishNodes()">
           <div class="node-card">
             <div class="node-label">{{ n.label }}</div>
-            <div class="node-status" [class]="statusClass(n.status)">
-              <span class="dot" *ngIf="statusLabel(n.status)"></span>
-              <span class="label">{{ statusLabel(n.status) }}</span>
+            <div class="status-wrap">
+              <div class="node-status" [class]="statusClass(n.status)">
+                <span class="dot" *ngIf="statusLabel(n.status)"></span>
+                <span class="label">{{ statusLabel(n.status) }}</span>
+              </div>
+              <div class="inspect-pop">
+                <div class="inspect-title">Logs</div>
+                <div class="inspect-empty" *ngIf="!logsFor(n.step).length">
+                  No message yet.
+                </div>
+                <pre class="inspect-log" *ngIf="logsFor(n.step).length">{{
+                  logsFor(n.step).join("\n")
+                }}</pre>
+              </div>
             </div>
           </div>
           <div class="connector"></div>
@@ -45,9 +56,20 @@
         <div class="workflow-node" *ngFor="let n of codepatchNodes()">
           <div class="node-card">
             <div class="node-label">{{ n.label }}</div>
-            <div class="node-status" [class]="statusClass(n.status)">
-              <span class="dot" *ngIf="statusLabel(n.status)"></span>
-              <span class="label">{{ statusLabel(n.status) }}</span>
+            <div class="status-wrap">
+              <div class="node-status" [class]="statusClass(n.status)">
+                <span class="dot" *ngIf="statusLabel(n.status)"></span>
+                <span class="label">{{ statusLabel(n.status) }}</span>
+              </div>
+              <div class="inspect-pop">
+                <div class="inspect-title">Logs</div>
+                <div class="inspect-empty" *ngIf="!logsFor(n.step).length">
+                  No message yet.
+                </div>
+                <pre class="inspect-log" *ngIf="logsFor(n.step).length">{{
+                  logsFor(n.step).join("\n")
+                }}</pre>
+              </div>
             </div>
           </div>
           <div class="connector"></div>

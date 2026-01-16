@@ -419,4 +419,38 @@ ${JSON.stringify(input, null, 2)}`;
 
     return clamped;
   }
+
+  /** AI decides Tinyfish research goal for a specific finding */
+  async getTinyfishGoal(finding: Finding): Promise<string> {
+    const system =
+      'You are a security analyst. Produce a short research goal for Semgrep Registry queries.';
+    const user = `Given this finding, produce ONE concise research goal to run in Semgrep Registry.
+Rules:
+- Return plain text only (no JSON, no bullets, no code fences).
+- Keep it under 20 words.
+- Focus on identifying rule context, safe remediation guidance, or official docs.
+
+Finding:
+${JSON.stringify(
+  {
+    ruleId: finding.ruleId,
+    severity: finding.severity,
+    message: finding.message,
+    file: finding.location?.file,
+    line: finding.location?.line,
+  },
+  null,
+  2
+)}`;
+
+    const text = await this.invokeOnce(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { maxTokens: 120, temperature: 0.2 }
+    );
+
+    return String(text || '').trim();
+  }
 }

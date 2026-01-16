@@ -13,6 +13,8 @@ import {
 import { BedrockService } from '../../services/bedrock.service';
 import { ChatService } from '../../services/chat.service';
 import { RemediationService } from '../../services/remediation.service';
+import type { RemediationStatus, RemediationStep } from '../../models/remediation.model';
+import { environment } from '../../../environments/environment';
 
 type TurnRole = 'system' | 'user' | 'assistant';
 
@@ -37,6 +39,7 @@ export class AiChatboxComponent {
   activeTab = signal<'chat' | 'workflow'>('chat');
 
   private abort = new AbortController();
+  private autoSwitched = false;
 
   // Keep the system prompt out of the visible chat history
   private systemPrompt =
@@ -49,25 +52,39 @@ export class AiChatboxComponent {
 
   latestTask = computed(() => this.remediation.tasks()[0] ?? null);
   showWorkflow = computed(() => {
+    if (environment.ui.forceWorkflowTab) return true;
     const t = this.latestTask();
     if (!t) return false;
     return t.status !== 'queued' || t.tinyfishStatus !== 'queued';
   });
+  private typeNode = <T extends RemediationStep>(
+    label: string,
+    status: RemediationStatus,
+    step: T
+  ) => ({ label, status, step });
+
   tinyfishNodes = computed(() => {
     const t = this.latestTask();
-    return [{ label: 'Tinyfish Research', status: t?.tinyfishStatus ?? 'idle' }];
+    return [
+      this.typeNode(
+        'Deep Research',
+        (t?.tinyfishStatus ?? 'queued') as RemediationStatus,
+        'tinyfish'
+      ),
+    ];
   });
 
   codepatchNodes = computed(() => {
     const t = this.latestTask();
-    const baseStatus = t?.status ?? 'idle';
+    const baseStatus = (t?.status ?? 'queued') as RemediationStatus;
     const downstreamStatus = this.stepStatus(baseStatus);
     return [
-      { label: 'Code Patch', status: baseStatus },
-      { label: 'Push to GitHub', status: downstreamStatus },
-      { label: 'Rescan', status: downstreamStatus },
+      this.typeNode('Code Patch', baseStatus, 'codepatch'),
+      this.typeNode('Push to GitHub', downstreamStatus, 'push'),
+      this.typeNode('Rescan', downstreamStatus, 'rescan'),
     ];
   });
+
 
   constructor() {
     // Auto-reply whenever the latest message is from the user (either from the input or external “Fix with AI”)
@@ -85,6 +102,13 @@ export class AiChatboxComponent {
     );
 
     this.destroyRef.onDestroy(() => this.stop());
+
+    effect(() => {
+      if ((this.showWorkflow() || environment.ui.forceWorkflowTab) && !this.autoSwitched) {
+        this.activeTab.set('workflow');
+        this.autoSwitched = true;
+      }
+    });
   }
 
   /** Called by your form submit / send button */
@@ -154,14 +178,14 @@ export class AiChatboxComponent {
     if (el) el.scrollTop = el.scrollHeight;
   }
 
-  statusClass(status: string) {
+  statusClass(status: RemediationStatus) {
     if (status === 'running') return 'wf-status is-running';
     if (status === 'completed') return 'wf-status is-done';
     if (status === 'error') return 'wf-status is-error';
-    return 'wf-status is-waiting';
+    return 'wf-status is-pending';
   }
 
-  statusLabel(status: string) {
+  statusLabel(status: RemediationStatus) {
     if (status === 'running') return 'running';
     if (status === 'completed') return 'done';
     if (status === 'error') return 'error';
@@ -172,8 +196,13 @@ export class AiChatboxComponent {
     this.activeTab.set(tab);
   }
 
-  private stepStatus(status: string) {
+  private stepStatus(status: RemediationStatus): RemediationStatus {
     if (status === 'completed') return 'completed';
-    return 'idle';
+    return 'queued';
+  }
+
+  logsFor(step: RemediationStep) {
+    const task = this.latestTask();
+    return task?.logs?.[step] ?? [];
   }
 }

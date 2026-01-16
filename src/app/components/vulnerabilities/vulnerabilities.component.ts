@@ -134,7 +134,10 @@ export class VulnerabilitiesComponent {
     const prompt = `
 When replying, please use markdown formatting for headers, please start with heading-2
 
-Please analyze and fix the following vulnerability:
+Briefly describe what you will fix, what you will research online, and that you will pass the findings to the code patching agent.
+Keep it to 2-3 short sentences.
+
+Vulnerability details:
 
 Rule: ${finding.ruleId}
 Severity: ${finding.severity}
@@ -142,8 +145,7 @@ Message: ${finding.message}
 File: ${finding.location?.file}:${finding.location?.line}
 Snippet:
 ${finding.location?.snippet}
-
-Generate a secure code fix and explain the changes.`;
+`;
     this.chat.sendToChat(prompt);
 
     this.remediation.enqueue(finding);

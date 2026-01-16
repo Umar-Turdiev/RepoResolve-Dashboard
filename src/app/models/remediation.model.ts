@@ -1,6 +1,7 @@
 import type { Finding } from './finding.model';
 
 export type RemediationStatus = 'queued' | 'running' | 'completed' | 'error';
+export type RemediationStep = 'codepatch' | 'push' | 'rescan' | 'tinyfish';
 
 export interface RemediationResult {
   summary?: string;
@@ -25,4 +26,5 @@ export interface RemediationTask {
   tinyfishStatus?: RemediationStatus;
   tinyfishOutput?: string;
   tinyfishError?: string;
+  logs?: Partial<Record<RemediationStep, string[]>>;
 }
