@@ -8,10 +8,12 @@ import type {
   RemediationTask,
   RemediationStatus,
 } from '../models/remediation.model';
+import { TinyfishService } from './tinyfish.service';
 
 @Injectable({ providedIn: 'root' })
 export class RemediationService {
   private http = inject(HttpClient);
+  private tinyfish = inject(TinyfishService);
   private readonly _tasks = signal<RemediationTask[]>([]);
 
   readonly tasks = computed(() => this._tasks());
@@ -37,6 +39,7 @@ export class RemediationService {
       createdAt: new Date().toISOString(),
       status: 'queued',
       finding,
+      tinyfishStatus: 'queued',
     };
 
     this._tasks.update((v) => [task, ...v]);
@@ -45,6 +48,7 @@ export class RemediationService {
   }
 
   private runTask(task: RemediationTask) {
+    this.startTinyfish(task);
     this.updateTask(task.id, { status: 'running' });
 
     const url = environment.lambdaEndpoints.remediationTaskUrl;
@@ -80,6 +84,44 @@ export class RemediationService {
     });
   }
 
+  private startTinyfish(task: RemediationTask) {
+    const apiKey = environment.mino.apiKey;
+    const runUrl = environment.mino.runSseUrl;
+    const siteUrl = environment.mino.defaultUrl;
+    if (!apiKey || !runUrl || !siteUrl) {
+      this.mockTinyfish(task.id);
+      return;
+    }
+
+    this.updateTask(task.id, { tinyfishStatus: 'running', tinyfishOutput: '' });
+
+    const goal = this.buildTinyfishGoal(task);
+    this.tinyfish
+      .runAutomation({ url: siteUrl, goal }, (chunk) => {
+        this.appendTinyfishOutput(task.id, chunk);
+      })
+      .then((full) => {
+        this.updateTask(task.id, {
+          tinyfishStatus: 'completed',
+          tinyfishOutput: full,
+        });
+      })
+      .catch((err) => {
+        const msg = err?.message || String(err);
+        this.updateTask(task.id, {
+          tinyfishStatus: 'error',
+          tinyfishError: msg,
+        });
+      });
+  }
+
+  private buildTinyfishGoal(task: RemediationTask): string {
+    const file = task.file
+      ? `${task.file}${task.line ? ':' + task.line : ''}`
+      : 'unknown file';
+    return `Research remediation guidance for rule ${task.ruleId || 'unknown'} (${task.severity || 'unknown'}) in ${file}. Provide actionable fix steps in JSON.`;
+  }
+
   private mockComplete(taskId: string) {
     setTimeout(() => {
       this.updateTask(taskId, {
@@ -90,6 +132,25 @@ export class RemediationService {
         },
       });
     }, 900);
+  }
+
+  private mockTinyfish(taskId: string) {
+    setTimeout(() => {
+      this.updateTask(taskId, {
+        tinyfishStatus: 'completed',
+        tinyfishOutput: '{"summary":"Mock Tinyfish research complete.","sources":[]}',
+      });
+    }, 700);
+  }
+
+  private appendTinyfishOutput(id: string, chunk: string) {
+    this._tasks.update((arr) =>
+      arr.map((t) => {
+        if (t.id !== id) return t;
+        const next = (t.tinyfishOutput || '') + chunk;
+        return { ...t, tinyfishOutput: next };
+      })
+    );
   }
 
   private updateTask(

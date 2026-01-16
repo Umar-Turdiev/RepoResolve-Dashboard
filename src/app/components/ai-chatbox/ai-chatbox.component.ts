@@ -6,10 +6,13 @@ import {
   effect,
   DestroyRef,
   ViewEncapsulation,
+  computed,
+  signal,
 } from '@angular/core';
 
 import { BedrockService } from '../../services/bedrock.service';
 import { ChatService } from '../../services/chat.service';
+import { RemediationService } from '../../services/remediation.service';
 
 type TurnRole = 'system' | 'user' | 'assistant';
 
@@ -22,6 +25,7 @@ type TurnRole = 'system' | 'user' | 'assistant';
 export class AiChatboxComponent {
   private chat = inject(ChatService);
   private bedrock = inject(BedrockService);
+  private remediation = inject(RemediationService);
   private destroyRef = inject(DestroyRef);
 
   @ViewChild('scroll') scrollRef!: ElementRef<HTMLDivElement>;
@@ -30,6 +34,7 @@ export class AiChatboxComponent {
   draft = '';
   streaming = false;
   temperature = 0.2;
+  activeTab = signal<'chat' | 'workflow'>('chat');
 
   private abort = new AbortController();
 
@@ -41,6 +46,28 @@ export class AiChatboxComponent {
   get messages() {
     return this.chat.messages();
   }
+
+  latestTask = computed(() => this.remediation.tasks()[0] ?? null);
+  showWorkflow = computed(() => {
+    const t = this.latestTask();
+    if (!t) return false;
+    return t.status !== 'queued' || t.tinyfishStatus !== 'queued';
+  });
+  tinyfishNodes = computed(() => {
+    const t = this.latestTask();
+    return [{ label: 'Tinyfish Research', status: t?.tinyfishStatus ?? 'idle' }];
+  });
+
+  codepatchNodes = computed(() => {
+    const t = this.latestTask();
+    const baseStatus = t?.status ?? 'idle';
+    const downstreamStatus = this.stepStatus(baseStatus);
+    return [
+      { label: 'Code Patch', status: baseStatus },
+      { label: 'Push to GitHub', status: downstreamStatus },
+      { label: 'Rescan', status: downstreamStatus },
+    ];
+  });
 
   constructor() {
     // Auto-reply whenever the latest message is from the user (either from the input or external “Fix with AI”)
@@ -125,5 +152,28 @@ export class AiChatboxComponent {
   private scrollToEnd() {
     const el = this.scrollRef?.nativeElement;
     if (el) el.scrollTop = el.scrollHeight;
+  }
+
+  statusClass(status: string) {
+    if (status === 'running') return 'wf-status is-running';
+    if (status === 'completed') return 'wf-status is-done';
+    if (status === 'error') return 'wf-status is-error';
+    return 'wf-status is-waiting';
+  }
+
+  statusLabel(status: string) {
+    if (status === 'running') return 'running';
+    if (status === 'completed') return 'done';
+    if (status === 'error') return 'error';
+    return '';
+  }
+
+  setTab(tab: 'chat' | 'workflow') {
+    this.activeTab.set(tab);
+  }
+
+  private stepStatus(status: string) {
+    if (status === 'completed') return 'completed';
+    return 'idle';
   }
 }

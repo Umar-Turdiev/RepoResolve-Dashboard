@@ -1,9 +1,62 @@
 <div class="chat">
   <div class="chat-header">
     <h1 class="title">AI Assistant</h1>
+
+    <div class="chat-tabs">
+      <button
+        class="tab"
+        [class.active]="activeTab() === 'chat'"
+        (click)="setTab('chat')"
+        type="button"
+      >
+        Chat
+      </button>
+      <button
+        class="tab"
+        *ngIf="showWorkflow()"
+        [class.active]="activeTab() === 'workflow'"
+        (click)="setTab('workflow')"
+        type="button"
+      >
+        Workflow
+      </button>
+    </div>
   </div>
 
-  <div class="chat-body" #scroll>
+  <div
+    class="workflow-panel"
+    *ngIf="showWorkflow() && activeTab() === 'workflow'"
+  >
+    <div class="workflow-title">Workflow</div>
+    <div class="workflow-graph">
+      <div class="workflow-column">
+        <div class="workflow-node" *ngFor="let n of tinyfishNodes()">
+          <div class="node-card">
+            <div class="node-label">{{ n.label }}</div>
+            <div class="node-status" [class]="statusClass(n.status)">
+              <span class="dot" *ngIf="statusLabel(n.status)"></span>
+              <span class="label">{{ statusLabel(n.status) }}</span>
+            </div>
+          </div>
+          <div class="connector"></div>
+        </div>
+      </div>
+      <div class="workflow-column">
+        <div class="workflow-node" *ngFor="let n of codepatchNodes()">
+          <div class="node-card">
+            <div class="node-label">{{ n.label }}</div>
+            <div class="node-status" [class]="statusClass(n.status)">
+              <span class="dot" *ngIf="statusLabel(n.status)"></span>
+              <span class="label">{{ statusLabel(n.status) }}</span>
+            </div>
+          </div>
+          <div class="connector"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-body" #scroll *ngIf="activeTab() === 'chat'">
     <div
       *ngFor="let m of messages"
       class="msg"
