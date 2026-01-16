@@ -453,4 +453,37 @@ ${JSON.stringify(
 
     return String(text || '').trim();
   }
+
+  /** AI generates a short comment for the patcher run */
+  async getPatcherComment(finding: Finding): Promise<string> {
+    const system =
+      'You are a senior security engineer. Write a concise patching note.';
+    const user = `Write a short comment (1 sentence) describing the intended fix for this finding.
+Rules:
+- Plain text only (no JSON, no bullets, no code fences).
+- Keep under 25 words.
+
+Finding:
+${JSON.stringify(
+  {
+    ruleId: finding.ruleId,
+    severity: finding.severity,
+    message: finding.message,
+    file: finding.location?.file,
+    line: finding.location?.line,
+  },
+  null,
+  2
+)}`;
+
+    const text = await this.invokeOnce(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { maxTokens: 120, temperature: 0.2 }
+    );
+
+    return String(text || '').trim();
+  }
 }

@@ -63,7 +63,8 @@
               </div>
               <div class="inspect-pop">
                 <div class="inspect-title">Logs</div>
-                <div class="inspect-empty" *ngIf="!logsFor(n.step).length">
+                <!-- <div class="inspect-empty" *ngIf="!logsFor(n.step).length"> -->
+                <div class="inspect-empty">
                   No message yet.
                 </div>
                 <pre class="inspect-log" *ngIf="logsFor(n.step).length">{{

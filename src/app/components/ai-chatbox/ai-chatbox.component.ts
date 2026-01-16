@@ -103,12 +103,18 @@ export class AiChatboxComponent {
 
     this.destroyRef.onDestroy(() => this.stop());
 
-    effect(() => {
-      if ((this.showWorkflow() || environment.ui.forceWorkflowTab) && !this.autoSwitched) {
-        this.activeTab.set('workflow');
-        this.autoSwitched = true;
-      }
-    });
+    effect(
+      () => {
+        if (
+          (this.showWorkflow() || environment.ui.forceWorkflowTab) &&
+          !this.autoSwitched
+        ) {
+          this.activeTab.set('workflow');
+          this.autoSwitched = true;
+        }
+      },
+      { allowSignalWrites: true }
+    );
   }
 
   /** Called by your form submit / send button */
