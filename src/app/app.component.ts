@@ -1,4 +1,6 @@
-import { Component, computed, inject, Signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { ScanService } from './services/scan.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { FindingsService } from './services/findings.service';
@@ -35,6 +37,10 @@ import { environment } from '../environments/environment';
 export class AppComponent {
   private scan = inject(ScanService);
   private findings = inject(FindingsService);
+  private router = inject(Router);
+
+  private currentUrl = signal(this.router.url);
+  showChat = computed(() => this.currentUrl().startsWith('/vulnerabilities'));
 
   hasSession = computed(
     () => !!environment.devConfigs.skipStartScreen || !!this.scan.scanSession()
@@ -42,5 +48,11 @@ export class AppComponent {
 
   constructor() {
     this.findings.initDevMockIfEnabled(); // 👈 seeds fake data for UI
+
+    this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd))
+      .subscribe((e) => {
+        this.currentUrl.set((e as NavigationEnd).urlAfterRedirects);
+      });
   }
 }

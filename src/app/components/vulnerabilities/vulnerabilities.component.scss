@@ -4,7 +4,7 @@
 .panel {
   @include mixins.widget;
   width: 100%;
-  height: 100%;
+  height: calc(106.5%);
   display: flex;
   flex-direction: column;
 }
@@ -187,7 +187,7 @@
     }
 
     .ai-fix-btn {
-      background: #ffe877;
+      background: #77c4ff;
       color: #000;
       border: none;
       font-weight: 600;

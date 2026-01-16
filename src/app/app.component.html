@@ -7,7 +7,7 @@
 <ng-template #appShell>
   <div class="app-root">
     <div role="navigation" class="menubar">
-      <a routerLink="/" class="brand">RepoResolve</a>
+      <a routerLink="/" class="brand">BlueScreenOfTrust</a>
 
       <div class="separator"></div>
 
@@ -50,9 +50,9 @@
       <div class="page-container">
         <router-outlet></router-outlet>
       </div>
-      <!-- <div class="ai-chatbox" @popIn>
+      <div *ngIf="showChat()" class="ai-chatbox" @popIn>
         <app-ai-chatbox></app-ai-chatbox>
-      </div> -->
+      </div>
     </main>
   </div>
 </ng-template>

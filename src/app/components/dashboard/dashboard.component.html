@@ -1,7 +1,7 @@
 <section @widgetsPopIn>
   <div class="widget" style="width: 455px">
     <div class="widget__header">
-      <h1>Security Summary</h1>
+      <h1>Security Overview</h1>
     </div>
     <div class="widget__content summary">
       <pre>{{ aiSummary() || "—" }}</pre>
@@ -62,7 +62,7 @@
 
   <div class="widget wide">
     <div class="widget__header">
-      <h1>Safety Score Trend</h1>
+      <h1>Safety Rating Trend</h1>
     </div>
     <div class="widget__content">
       <apx-chart
@@ -87,6 +87,23 @@
         <i class="fa-solid fa-arrow-up"></i>
       </a>
     </div>
-    <div class="widget__content">Details...</div>
+    <div class="widget__content remediation">
+      <div class="remediation-empty" *ngIf="!remediationTasks().length">
+        No remediation tasks yet.
+      </div>
+      <ul class="remediation-list" *ngIf="remediationTasks().length">
+        <li class="remediation-item" *ngFor="let t of remediationTasks()">
+          <div class="remediation-row">
+            <span class="status">{{ t.status }}</span>
+            <span class="rule">{{ t.ruleId || 'rule' }}</span>
+          </div>
+          <div class="meta">
+            <span class="file">{{ t.file || 'unknown file' }}</span>
+            <span class="line" *ngIf="t.line">:{{ t.line }}</span>
+          </div>
+          <div class="msg">{{ t.message }}</div>
+        </li>
+      </ul>
+    </div>
   </div>
 </section>

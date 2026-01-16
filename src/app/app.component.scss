@@ -76,6 +76,7 @@
   display: flex;
   gap: 5px;
   padding-top: 100px;
+  padding-right: 10px;
 }
 
 .menubar {
@@ -136,7 +137,6 @@
 
 .page-container {
   width: 100%;
-  margin: 10px;
   min-height: calc(100dvh - 151px);
   max-height: calc(100dvh - 151px);
 }
@@ -145,8 +145,9 @@
   min-width: 500px;
   max-width: 500px;
   background-color: var(--panel-bg-inverted);
-  border-radius: 40px;
-  min-height: calc(100dvh - 151px);
-  max-height: calc(100dvh - 151px);
+  border-radius: 25px;
+  // min-height: calc(100dvh - 151px);
+  // max-height: calc(100dvh - 151px);
+  height: 98%;
   overflow-y: hidden;
 }

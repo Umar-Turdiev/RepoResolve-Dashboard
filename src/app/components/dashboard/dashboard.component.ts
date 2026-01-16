@@ -12,6 +12,7 @@ import {
 import { ScanService, StartScanResponse } from '../../services/scan.service';
 import type { SarifLog, SarifResult } from '../../models/sarif.model';
 import { FindingsService } from '../../services/findings.service';
+import { RemediationService } from '../../services/remediation.service';
 import {
   ApexChart,
   ApexAxisChartSeries,
@@ -59,12 +60,14 @@ type Sev = 'critical' | 'high' | 'medium' | 'low' | 'info';
 })
 export class DashboardComponent {
   store = inject(FindingsService);
+  remediation = inject(RemediationService);
 
   // Semgrep-only for this widget (keep or swap to all-tools if you want)
   semgrep = computed(() => this.store.byTool('semgrep')());
   total = computed(() => this.semgrep().length);
   safetyScore = computed(() => this.store.safetyScore());
   aiSummary = computed(() => this.store.aiSummary());
+  remediationTasks = computed(() => this.remediation.tasks());
 
   private order: Sev[] = ['critical', 'high', 'medium', 'low', 'info'];
 

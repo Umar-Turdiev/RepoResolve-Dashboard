@@ -1,7 +1,14 @@
-import { Component, computed, inject, signal, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  signal,
+  ViewEncapsulation,
+} from '@angular/core';
 import { trigger, transition, style, animate } from '@angular/animations';
 
 import { FindingsService } from '../../services/findings.service';
+import { RemediationService } from '../../services/remediation.service';
 import type { Finding } from '../../models/finding.model';
 import { ChatService } from '../../services/chat.service';
 
@@ -24,6 +31,7 @@ type SortKey = 'severity' | 'rule' | 'file';
 export class VulnerabilitiesComponent {
   private store = inject(FindingsService);
   private chat = inject(ChatService);
+  private remediation = inject(RemediationService);
 
   langOf(file?: string | null): string | undefined {
     const ext = (file || '').split('.').pop()?.toLowerCase();
@@ -122,7 +130,7 @@ export class VulnerabilitiesComponent {
     }
   }
 
-  askAiToFix(finding: any) {
+  askAiToFix(finding: Finding) {
     const prompt = `
 When replying, please use markdown formatting for headers, please start with heading-2
 
@@ -137,5 +145,7 @@ ${finding.location?.snippet}
 
 Generate a secure code fix and explain the changes.`;
     this.chat.sendToChat(prompt);
+
+    this.remediation.enqueue(finding);
   }
 }
