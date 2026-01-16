@@ -56,7 +56,7 @@ export class RemediationService {
     this.appendLog(task.id, 'codepatch', 'Code patching started.');
     this.updateTask(task.id, { status: 'running' });
 
-    const url = environment.lambdaEndpoints.remediationTaskUrl;
+    const url = environment.lambdaEndpoints.startPatcherUrl;
     if (!url) {
       this.mockComplete(task.id);
       return;
