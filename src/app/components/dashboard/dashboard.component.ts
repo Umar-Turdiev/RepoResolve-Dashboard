@@ -68,6 +68,7 @@ export class DashboardComponent {
   safetyScore = computed(() => this.store.safetyScore());
   aiSummary = computed(() => this.store.aiSummary());
   remediationTasks = computed(() => this.remediation.tasks());
+  issuesSummary = computed(() => this.store.issuesSummary());
 
   private order: Sev[] = ['critical', 'high', 'medium', 'low', 'info'];
 

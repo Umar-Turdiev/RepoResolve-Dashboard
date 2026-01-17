@@ -7,10 +7,12 @@ import { environment } from '../../environments/environment';
 export class FindingsService {
   // all findings in one place
   private readonly _all = signal<Finding[]>([]);
+  private readonly _issuesSummary = signal<string>('');
 
   // public read-only views
   readonly all = computed(() => this._all());
   readonly count = computed(() => this._all().length);
+  readonly issuesSummary = computed(() => this._issuesSummary());
   private readonly _aiSummary = signal<string>('');
   private readonly _safetyScore = signal<number | null>(null);
   readonly aiSummary = computed(() => this._aiSummary());
@@ -43,6 +45,10 @@ export class FindingsService {
     );
   }
 
+  remove(id: string) {
+    this._all.set(this._all().filter((f) => f.id !== id));
+  }
+
   setAiSummary(summary: string) {
     this._aiSummary.set(summary || '');
   }
@@ -53,6 +59,10 @@ export class FindingsService {
       return;
     }
     this._safetyScore.set(Math.min(10, Math.max(0, score)));
+  }
+
+  setIssuesSummary(summary: string) {
+    this._issuesSummary.set(summary || '');
   }
 
   loadMockFindings() {

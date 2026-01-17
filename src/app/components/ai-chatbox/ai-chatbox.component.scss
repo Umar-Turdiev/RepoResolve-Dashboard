@@ -83,6 +83,15 @@
   align-items: center;
   justify-content: space-between;
 }
+.skip-btn {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f3f4f6;
+  color: #1d1d1f;
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
 .node-label {
   font-size: 12px;
   opacity: 0.9;

@@ -226,12 +226,13 @@ export class ScanService {
 
   // ✅ the live polling subscription lives here (not in a component)
   private logSub?: Subscription;
+  private prevFindingsByTask = new Map<string, Finding[]>();
 
   /** Start a scan for a tool (works for both semgrep and harness) */
   startScan(
     input: string,
     tool: ToolKind,
-    opts?: { branch?: string }
+    opts?: { branch?: string; previousFindings?: Finding[] }
   ): Observable<StartScanResponse> {
     const a = ADAPTERS[tool];
     let v = String(input || '').trim();
@@ -271,6 +272,10 @@ export class ScanService {
             repo: body?.repo ?? v,
             branch: body?.branch ?? opts?.branch,
           } as StartScanResponse;
+
+          if (opts?.previousFindings?.length) {
+            this.prevFindingsByTask.set(rawTaskId, opts.previousFindings);
+          }
 
           // store both variants on the session so we can retry if needed
           (this as any).__lastIds = { rawTaskId, shortTaskId, tool };
@@ -329,7 +334,7 @@ export class ScanService {
             // fetch results (console log only as requested)
             const params = new HttpParams().set('name', filename);
             this.http.get(a.resultUrl, { params }).subscribe({
-              next: (res) => {
+              next: async (res) => {
                 console.log(`[${tool}] ✅ Result Lambda response:`, res);
 
                 // 1) Normalize to Finding[]
@@ -349,6 +354,18 @@ export class ScanService {
                 if (!normalized.length) {
                   console.warn(`[${tool}] ℹ️ No findings after normalization.`);
                 } else {
+                  const previous =
+                    tool === 'semgrep'
+                      ? this.prevFindingsByTask.get(taskId) ?? []
+                      : [];
+                  if (tool === 'semgrep' && previous.length) {
+                    const refined = await this.bedrock.filterRescanFindings(
+                      previous,
+                      normalized
+                    );
+                    normalized = refined;
+                    this.prevFindingsByTask.delete(taskId);
+                  }
                   console.table(
                     normalized.map((n) => ({
                       tool: n.tool,

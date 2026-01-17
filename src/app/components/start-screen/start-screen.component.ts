@@ -12,6 +12,10 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { ScanService } from '../../services/scan.service';
 import type { SarifLog, SarifResult } from '../../models/sarif.model';
 import { ToolKind } from '../../models/finding.model';
+import { YutoriService } from '../../services/yutori.service';
+import { BedrockService } from '../../services/bedrock.service';
+import { FindingsService } from '../../services/findings.service';
+import { environment } from '../../../environments/environment';
 
 type Phase = 'idle' | 'starting' | 'scanning' | 'completed' | 'error';
 
@@ -33,6 +37,9 @@ function canon(input: string): string {
 export class StartScreenComponent implements AfterViewInit {
   private fb = inject(FormBuilder);
   private scan = inject(ScanService);
+  private yutori = inject(YutoriService);
+  private bedrock = inject(BedrockService);
+  private findingsStore = inject(FindingsService);
   private destroyRef = inject(DestroyRef);
   private gotAnyLogs = false;
   @ViewChild('interactiveBubble', { static: true })
@@ -57,7 +64,7 @@ export class StartScreenComponent implements AfterViewInit {
 
   form = this.fb.group({
     repoUrl: [
-      'https://github.com/TransformerOptimus/SuperAGI',
+      'https://github.com/Kayden-F-Pham/SuperAGI/',
       [Validators.required],
     ], // no format validator
   });
@@ -125,6 +132,8 @@ export class StartScreenComponent implements AfterViewInit {
       ? raw.replace(/\.git$/i, '').replace(/\/+$/, '')
       : `https://github.com/${raw.replace(/\.git$/i, '').replace(/\/+$/, '')}`;
 
+    this.startIssuesScout(normalized);
+
     // Run both Semgrep and Harness in parallel
     const tools: ToolKind[] = ['semgrep', 'harness'];
 
@@ -171,6 +180,45 @@ export class StartScreenComponent implements AfterViewInit {
         },
       });
     });
+  }
+
+  private async startIssuesScout(repoUrl: string) {
+    if (!environment.yutori.apiKey) return;
+
+    try {
+      const issuesUrl = `${repoUrl}/issues`;
+      const taskText = `Summarize the latest GitHub issues for ${repoUrl}. Focus on themes, severity, and recent activity. Source: ${issuesUrl}`;
+      const start = await this.yutori.runTask({
+        task: taskText,
+        start_url: issuesUrl,
+      });
+      const taskId = start?.task_id || start?.taskId || start?.id;
+      if (!taskId) return;
+
+      let result: any = null;
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 1500));
+        const statusRes = await this.yutori.getTask(taskId);
+        const status = String(statusRes?.status || '').toLowerCase();
+        if (status && status !== 'queued' && status !== 'running') {
+          result = statusRes;
+          break;
+        }
+      }
+
+      if (!result) {
+        this.findingsStore.setIssuesSummary('Issues summary pending...');
+        return;
+      }
+
+      const summary = await this.bedrock.summarizeIssuesFromYutori(
+        repoUrl,
+        result
+      );
+      this.findingsStore.setIssuesSummary(summary);
+    } catch (err) {
+      console.error('[yutori] scout error', err);
+    }
   }
 
   private streamLogsAndFinish(taskId: string) {

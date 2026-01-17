@@ -13,6 +13,8 @@ import { TinyfishService } from './tinyfish.service';
 import { BedrockService } from './bedrock.service';
 import { ScanService } from './scan.service';
 import { FindingsService } from './findings.service';
+import { YutoriService } from './yutori.service';
+import { ChatService } from './chat.service';
 
 @Injectable({ providedIn: 'root' })
 export class RemediationService {
@@ -21,6 +23,8 @@ export class RemediationService {
   private bedrock = inject(BedrockService);
   private scan = inject(ScanService);
   private findings = inject(FindingsService);
+  private yutori = inject(YutoriService);
+  private chat = inject(ChatService);
   private readonly _tasks = signal<RemediationTask[]>([]);
 
   readonly tasks = computed(() => this._tasks());
@@ -47,6 +51,8 @@ export class RemediationService {
       status: 'queued',
       finding,
       tinyfishStatus: 'queued',
+      yutoriStatus: 'queued',
+      patcherRuns: 0,
       logs: {},
     };
 
@@ -57,6 +63,7 @@ export class RemediationService {
 
   private runTask(task: RemediationTask) {
     this.startTinyfish(task);
+    this.updateTask(task.id, { patcherRuns: (task.patcherRuns || 0) + 1 });
     this.appendLog(task.id, 'codepatch', 'Code patching started.');
     this.updateTask(task.id, { status: 'running' });
 
@@ -234,8 +241,9 @@ export class RemediationService {
         complete: () => {
           console.log('[patcher] logs complete');
           this.appendLog(taskId, 'codepatch', 'Patcher logs completed.');
+          this.appendLog(taskId, 'push', 'Push to GitHub completed.');
           this.updateTask(taskId, { status: 'completed' });
-          this.startRescan(taskId, repoUrl, branch);
+          this.startYutori(taskId, repoUrl, branch);
         },
         error: (err) => {
           console.error('[patcher] logs error', err);
@@ -254,10 +262,14 @@ export class RemediationService {
     const label = effectiveBranch ? `branch ${effectiveBranch}` : 'default branch';
     this.appendLog(taskId, 'rescan', `Rescan starting (${label}).`);
     console.log('[patcher] rescan start', { repoUrl, branch: effectiveBranch });
+    const previous = this.findings.byTool('semgrep')();
     this.findings.clear('semgrep');
 
     this.scan
-      .startScan(repoUrl, 'semgrep', { branch: effectiveBranch })
+      .startScan(repoUrl, 'semgrep', {
+        branch: effectiveBranch,
+        previousFindings: previous,
+      })
       .subscribe({
       next: (res) => {
         this.appendLog(taskId, 'rescan', `Rescan taskId: ${res.taskId}`);
@@ -270,6 +282,112 @@ export class RemediationService {
         console.error('[patcher] rescan error', err);
       },
     });
+  }
+
+  private startYutori(taskId: string, repoUrl: string, branch?: string) {
+    const apiKey = environment.yutori.apiKey;
+    const tasksUrl = environment.yutori.tasksUrl;
+    if (!apiKey || !tasksUrl) {
+      this.updateTask(taskId, {
+        yutoriStatus: 'error',
+        yutoriError: 'Yutori is not configured (missing API key or URL).',
+      });
+      return;
+    }
+
+    const task = this._tasks().find((t) => t.id === taskId);
+    if (!task?.finding) {
+      this.updateTask(taskId, {
+        yutoriStatus: 'error',
+        yutoriError: 'Missing finding context for Yutori.',
+      });
+      return;
+    }
+
+    this.updateTask(taskId, { yutoriStatus: 'running', yutoriOutput: '' });
+    this.appendLog(taskId, 'yutori', 'Yutori review started.');
+
+    this.bedrock
+      .getYutoriTask(task.finding, repoUrl, branch)
+      .then(({ task: yTask, start_url }) => {
+        this.appendLog(taskId, 'yutori', `Task: ${yTask}`);
+        return this.yutori.runTask({ task: yTask, start_url });
+      })
+      .then((res) => {
+        console.log('[yutori] start response', res);
+        const taskKey = res?.task_id || res?.taskId || res?.id;
+        if (!taskKey) {
+          throw new Error('No task_id returned from Yutori.');
+        }
+        this.appendLog(taskId, 'yutori', `Yutori task_id: ${taskKey}`);
+        return this.pollYutori(taskId, taskKey);
+      })
+      .catch((err) => {
+        const msg = err?.message || String(err);
+        this.appendLog(taskId, 'yutori', `Yutori failed: ${msg}`);
+        this.updateTask(taskId, { yutoriStatus: 'error', yutoriError: msg });
+      });
+  }
+
+  private pollYutori(taskId: string, yutoriTaskId: string) {
+    const sub = interval(1500)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.yutori.getTask(yutoriTaskId)),
+        tap((res) => {
+          console.log('[yutori] status', res);
+          const status = String(res?.status || '').toLowerCase();
+          if (status && status !== 'queued' && status !== 'running') {
+            const output = JSON.stringify(res);
+            this.updateTask(taskId, {
+              yutoriStatus: 'completed',
+              yutoriOutput: output,
+            });
+            this.appendLog(taskId, 'yutori', 'Yutori review completed.');
+            this.chat.sendToChat(
+              `Yutori review results:\n${output}\n\nDecide next steps for patcher or exit.`
+            );
+            const task = this._tasks().find((t) => t.id === taskId);
+            if (task?.finding) {
+              this.bedrock
+                .isFindingResolved(task.finding, res)
+                .then((ok) => {
+                  if (ok) {
+                    this.appendLog(
+                      taskId,
+                      'yutori',
+                      'Resolved; removing finding.'
+                    );
+                    this.findings.remove(task.findingId);
+                  }
+                })
+                .catch((err) => {
+                  const msg = err?.message || String(err);
+                  this.appendLog(
+                    taskId,
+                    'yutori',
+                    `Resolution check failed: ${msg}`
+                  );
+                });
+            }
+            sub.unsubscribe();
+          } else {
+            this.updateTask(taskId, { yutoriStatus: 'running' });
+          }
+        })
+      )
+      .subscribe({
+        error: (err) => {
+          const msg = err?.message || String(err);
+          this.appendLog(taskId, 'yutori', `Yutori status error: ${msg}`);
+          this.updateTask(taskId, { yutoriStatus: 'error', yutoriError: msg });
+        },
+      });
+  }
+
+  skipTinyfish(taskId: string) {
+    this.appendLog(taskId, 'tinyfish', 'Tinyfish skipped by user.');
+    this.updateTask(taskId, { tinyfishStatus: 'completed' });
   }
 
   private patcherSubs = new Map<string, Subscription>();

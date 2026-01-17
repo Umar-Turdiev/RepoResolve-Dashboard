@@ -42,21 +42,12 @@
 
   <div class="widget" style="width: 400px">
     <div class="widget__header">
-      <h1>Safety Rating</h1>
+      <h1>Repo Issues Scout</h1>
     </div>
-    <div class="widget__content safety-ring">
-      <div class="insight-numbers">
-        <p>14</p>
-        <p>4</p>
+    <div class="widget__content">
+      <div class="summary">
+        <pre>{{ issuesSummary() || "No issues summary yet." }}</pre>
       </div>
-      <apx-chart
-        [series]="safetyRadialSeries()"
-        [chart]="safetyRadialChart"
-        [plotOptions]="safetyRadialPlot"
-        [fill]="safetyRadialFill"
-        [stroke]="safetyRadialStroke"
-        [labels]="safetyRadialLabels"
-      ></apx-chart>
     </div>
   </div>
 

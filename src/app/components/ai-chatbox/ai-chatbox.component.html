@@ -38,6 +38,9 @@
                 <span class="dot" *ngIf="statusLabel(n.status)"></span>
                 <span class="label">{{ statusLabel(n.status) }}</span>
               </div>
+              <button class="skip-btn" type="button" (click)="skipTinyfish()">
+                Skip
+              </button>
               <div class="inspect-pop">
                 <div class="inspect-title">Logs</div>
                 <div class="inspect-empty" *ngIf="!logsFor(n.step).length">

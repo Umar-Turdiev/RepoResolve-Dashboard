@@ -486,4 +486,163 @@ ${JSON.stringify(
 
     return String(text || '').trim();
   }
+
+  /** Filter rescan findings using previous findings context */
+  async filterRescanFindings(
+    previous: Finding[],
+    current: Finding[]
+  ): Promise<Finding[]> {
+    if (!current.length) return current;
+
+    const prev = this.sanitizeForAI(previous, 200, 200);
+    const next = this.sanitizeForAI(current, 200, 200);
+
+    const system =
+      'You compare scan results before and after fixes to remove resolved items.';
+    const user = `Given the previous findings (before fixes) and current findings (after fixes), remove items that are likely resolved or false positives.
+Rules:
+- Return JSON ONLY.
+- Return the filtered "current" array (same objects) keeping only unresolved findings.
+- Do NOT invent or modify fields.
+
+Previous:
+${JSON.stringify(prev, null, 2)}
+
+Current:
+${JSON.stringify(next, null, 2)}`;
+
+    const text = await this.invokeOnce(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { maxTokens: 1200, temperature: 0.2 }
+    );
+
+    const parsed = this.tryParseJSON<Finding[]>(text);
+    if (!parsed || !Array.isArray(parsed)) return current;
+
+    const byId = new Map(current.map((f) => [f.id, f]));
+    const out: Finding[] = [];
+    for (const f of parsed) {
+      const hit = byId.get((f as any).id);
+      if (hit) out.push(hit);
+    }
+    return out.length ? out : [];
+  }
+
+  /** AI builds a Yutori browsing task for PR review */
+  async getYutoriTask(
+    finding: Finding,
+    repoUrl: string,
+    branch?: string
+  ): Promise<{ task: string; start_url: string }> {
+    const startUrl = branch
+      ? `${repoUrl}/pulls?q=is%3Apr+head%3A${encodeURIComponent(branch)}`
+      : `${repoUrl}/pulls`;
+
+    const system =
+      'You write concise browsing tasks for reviewing PR feedback.';
+    const user = `Write ONE short task instructing the browser to open the latest PR for this fix and summarize Macroscope feedback about the change.
+Rules:
+- Plain text only (no JSON, no bullets).
+- Keep under 20 words.
+
+Finding:
+${JSON.stringify(
+  {
+    ruleId: finding.ruleId,
+    severity: finding.severity,
+    file: finding.location?.file,
+    line: finding.location?.line,
+  },
+  null,
+  2
+)}`;
+
+    const task = await this.invokeOnce(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { maxTokens: 120, temperature: 0.2 }
+    );
+
+    return { task: String(task || '').trim(), start_url: startUrl };
+  }
+
+  /** AI decides if a finding is resolved based on Yutori/Macroscope feedback */
+  async isFindingResolved(
+    finding: Finding,
+    yutoriResult: unknown
+  ): Promise<boolean> {
+    const system =
+      'You determine if a security finding is resolved after reviewing PR feedback.';
+    const user = `Given the finding and Yutori review result, answer with ONLY "yes" or "no" if the finding is resolved.
+Rules:
+- Output exactly "yes" or "no".
+- If uncertain, say "no".
+
+Finding:
+${JSON.stringify(
+  {
+    ruleId: finding.ruleId,
+    severity: finding.severity,
+    message: finding.message,
+    file: finding.location?.file,
+    line: finding.location?.line,
+  },
+  null,
+  2
+)}
+
+Yutori:
+${JSON.stringify(yutoriResult, null, 2)}`;
+
+    const text = await this.invokeOnce(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { maxTokens: 20, temperature: 0 }
+    );
+
+    return String(text || '')
+      .trim()
+      .toLowerCase()
+      .startsWith('y');
+  }
+
+  /** Summarize Yutori scouting updates into ~100 words */
+  async summarizeIssuesFromYutori(
+    repoUrl: string,
+    yutoriUpdates: unknown
+  ): Promise<string> {
+    const system =
+      'You summarize repository issues based on scouting updates.';
+    const user = `Summarize the repository issues in exactly 100 words.
+Rules:
+- Plain text only.
+- Focus on themes, severity, and recent activity.
+- Mention if there are few/no issues.
+
+Repo: ${repoUrl}
+Updates:
+${JSON.stringify(yutoriUpdates, null, 2)}`;
+
+    const text = await this.invokeOnce(
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      { maxTokens: 300, temperature: 0.2 }
+    );
+
+    const cleaned = String(text || '').trim();
+    const words = cleaned.split(/\s+/).filter(Boolean);
+    if (words.length === 100) return cleaned;
+    if (words.length > 100) return words.slice(0, 100).join(' ');
+    const filler = Array(Math.max(0, 100 - words.length)).fill('—');
+    return words.concat(filler).join(' ');
+  }
 }

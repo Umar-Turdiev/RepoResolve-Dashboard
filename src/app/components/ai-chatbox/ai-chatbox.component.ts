@@ -77,11 +77,12 @@ export class AiChatboxComponent {
   codepatchNodes = computed(() => {
     const t = this.latestTask();
     const baseStatus = (t?.status ?? 'queued') as RemediationStatus;
-    const downstreamStatus = this.stepStatus(baseStatus);
+    const pushStatus = this.stepStatus(baseStatus);
+    const yutoriStatus = (t?.yutoriStatus ?? 'queued') as RemediationStatus;
     return [
       this.typeNode('Code Patch', baseStatus, 'codepatch'),
-      this.typeNode('Push to GitHub', downstreamStatus, 'push'),
-      this.typeNode('Rescan', downstreamStatus, 'rescan'),
+      this.typeNode('Push to GitHub', pushStatus, 'push'),
+      this.typeNode('Yutori Check', yutoriStatus, 'yutori'),
     ];
   });
 
@@ -210,5 +211,10 @@ export class AiChatboxComponent {
   logsFor(step: RemediationStep) {
     const task = this.latestTask();
     return task?.logs?.[step] ?? [];
+  }
+
+  skipTinyfish() {
+    const task = this.latestTask();
+    if (task) this.remediation.skipTinyfish(task.id);
   }
 }

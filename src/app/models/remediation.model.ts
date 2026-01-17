@@ -1,7 +1,12 @@
 import type { Finding } from './finding.model';
 
 export type RemediationStatus = 'queued' | 'running' | 'completed' | 'error';
-export type RemediationStep = 'codepatch' | 'push' | 'rescan' | 'tinyfish';
+export type RemediationStep =
+  | 'codepatch'
+  | 'push'
+  | 'rescan'
+  | 'tinyfish'
+  | 'yutori';
 
 export interface RemediationResult {
   summary?: string;
@@ -24,8 +29,12 @@ export interface RemediationTask {
   result?: RemediationResult;
   finding?: Finding;
   patcherBranch?: string;
+  patcherRuns?: number;
   tinyfishStatus?: RemediationStatus;
   tinyfishOutput?: string;
   tinyfishError?: string;
+  yutoriStatus?: RemediationStatus;
+  yutoriOutput?: string;
+  yutoriError?: string;
   logs?: Partial<Record<RemediationStep, string[]>>;
 }
